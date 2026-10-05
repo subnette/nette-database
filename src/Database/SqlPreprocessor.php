@@ -354,7 +354,9 @@ class SqlPreprocessor
 	private function formatLiteral(SqlLiteral $value): string
 	{
 		[$res, $params] = (clone $this)->process([$value->getSql(), ...array_values($value->getParameters())], $this->useParams);
-		$this->remaining = [...$this->remaining, ...$params];
+		foreach ($params as $param) {
+			$this->remaining[] = $param;
+		}
 		return $res;
 	}
 
