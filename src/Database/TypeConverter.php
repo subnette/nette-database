@@ -36,6 +36,9 @@ final class TypeConverter
 		'BYTEA|(TINY|MEDIUM|LONG|)BLOB|(LONG )?(VAR)?BINARY|IMAGE' => self::Binary,
 	];
 
+	/** @var array<string, int> memoized native type => detected type */
+	private static array $types = [];
+
 	public bool $convertBoolean = true;
 	public bool $convertDateTime = true;
 	public bool $convertDecimal = true;
@@ -47,23 +50,22 @@ final class TypeConverter
 	 */
 	private function detectType(string $nativeType): int
 	{
-		static $cache;
-		if (!isset($cache[$nativeType])) {
-			$cache[$nativeType] = self::Text;
+		if (!isset(self::$types[$nativeType])) {
+			self::$types[$nativeType] = self::Text;
 			foreach (self::Patterns as $s => $val) {
 				if (preg_match("#^($s)$#i", $nativeType)) {
-					return $cache[$nativeType] = $val;
+					return self::$types[$nativeType] = $val;
 				}
 			}
 		}
 
-		return $cache[$nativeType];
+		return self::$types[$nativeType];
 	}
 
 
 	public function convertToPhp(mixed $value, array $meta): mixed
 	{
-		return match ($this->detectType($meta['nativeType'] ?? '')) {
+		return match (self::$types[$meta['nativeType'] ?? ''] ?? $this->detectType($meta['nativeType'] ?? '')) {
 			self::Integer => $this->toInt($value),
 			self::Float => $this->toFloat($value),
 			self::Decimal => $this->convertDecimal

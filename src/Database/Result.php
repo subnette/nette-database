@@ -25,6 +25,8 @@ class Result implements \IteratorAggregate
 
 	/** @var array<string, array{name: string, nativeType: string, table?: string}> */
 	private array $meta;
+	private Drivers\Engine $engine;
+	private TypeConverter $converter;
 
 
 	public function __construct(
@@ -146,7 +148,16 @@ class Result implements \IteratorAggregate
 	public function fetch(): ?Row
 	{
 		$data = $this->fetchAssoc();
-		return $data === null ? null : Arrays::toObject($data, new Row);
+		if ($data === null) {
+			return null;
+		}
+
+		$row = new Row;
+		foreach ($data as $key => $value) {
+			$row->$key = $value;
+		}
+
+		return $row;
 	}
 
 
@@ -206,13 +217,13 @@ class Result implements \IteratorAggregate
 
 	private function normalizeRow(array $row): array
 	{
-		$engine = $this->explorer->getDatabaseEngine();
-		$converter = $this->explorer->getTypeConverter();
-		$this->meta ??= $this->getColumnsMeta();
+		$engine = $this->engine ??= $this->explorer->getDatabaseEngine();
+		$converter = $this->converter ??= $this->explorer->getTypeConverter();
+		$meta = $this->meta ??= $this->getColumnsMeta();
 		foreach ($row as $key => $value) {
-			$row[$key] = isset($value, $this->meta[$key])
-				? $engine->convertToPhp($value, $this->meta[$key], $converter)
-				: $value;
+			if ($value !== null && isset($meta[$key])) {
+				$row[$key] = $engine->convertToPhp($value, $meta[$key], $converter);
+			}
 		}
 		return $row;
 	}
