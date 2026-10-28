@@ -698,6 +698,10 @@ class SqlBuilder
 	/** @param  array<mixed>  $joins */
 	protected function parseJoins(array &$joins, string &$query): void
 	{
+		if (!str_contains($query, '.')) { // chain regexp requires a dot
+			return;
+		}
+
 		$query = preg_replace_callback($this->getColumnChainsRegxp(), function (array $match) use (&$joins): string {
 			return $this->parseJoinsCb($joins, $match);
 		}, $query) ?? throw new Nette\InvalidStateException('Failed to parse table joins.');
@@ -899,9 +903,24 @@ class SqlBuilder
 	 */
 	protected function tryDelimit(string $s): string
 	{
-		return preg_replace_callback(
+		static $caches;
+		$caches ??= new \WeakMap; // memoized per engine, as delimit() is deterministic
+		$holder = $caches[$this->engine] ??= (object) ['ids' => [], 'sql' => []];
+		if (isset($holder->sql[$s])) {
+			return $holder->sql[$s];
+		}
+
+		if (count($holder->ids) > 2000) {
+			$holder->ids = [];
+		}
+
+		if (count($holder->sql) > 500) {
+			$holder->sql = [];
+		}
+
+		return $holder->sql[$s] = preg_replace_callback(
 			'#(?<=[^\w`"\[?:]|^)[a-z_][a-z0-9_]*(?=[^\w`"(\]]|$)#Di',
-			fn(array $m): string => strtoupper($m[0]) === $m[0]
+			fn(array $m): string => $holder->ids[$m[0]] ??= strtoupper($m[0]) === $m[0]
 				? $m[0]
 				: $this->engine->delimit($m[0]),
 			$s,

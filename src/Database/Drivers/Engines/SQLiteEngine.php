@@ -12,7 +12,7 @@ use Nette\Database\DateTime;
 use Nette\Database\Drivers\Connection;
 use Nette\Database\Drivers\Engine;
 use Nette\Database\TypeConverter;
-use function array_values, in_array, preg_match, str_contains, strtoupper, strtr;
+use function array_values, preg_match, str_contains, strtoupper, strtr;
 
 
 /**
@@ -237,7 +237,8 @@ class SQLiteEngine implements Engine
 
 	public function convertToPhp(mixed $value, array $meta, TypeConverter $converter): mixed
 	{
-		return $converter->convertDateTime && in_array($meta['nativeType'], ['DATE', 'DATETIME'], strict: true)
+		$type = $meta['nativeType'];
+		return $converter->convertDateTime && ($type === 'DATE' || $type === 'DATETIME')
 			? (is_int($value) ? (new DateTime)->setTimestamp($value) : new DateTime($value))
 			: $converter->convertToPhp($value, $meta);
 	}

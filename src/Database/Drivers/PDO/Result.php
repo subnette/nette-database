@@ -12,11 +12,15 @@ namespace Nette\Database\Drivers\PDO;
 use Nette\Database\DriverException;
 use Nette\Database\Drivers;
 use PDOException;
+use function array_column, array_combine;
 
 
 class Result implements Drivers\Result
 {
 	private array $columns;
+
+	/** @var list<string> */
+	private array $names;
 
 
 	public function __construct(
@@ -33,11 +37,8 @@ class Result implements Drivers\Result
 			return null;
 		}
 
-		$res = [];
-		foreach ($this->getColumnsInfo() as $i => $meta) {
-			$res[$meta['name']] = $row[$i];
-		}
-		return $res;
+		$names = $this->names ??= array_column($this->getColumnsInfo(), 'name');
+		return array_combine($names, $row);
 	}
 
 

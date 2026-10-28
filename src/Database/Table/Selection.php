@@ -9,7 +9,7 @@ namespace Nette\Database\Table;
 
 use Nette;
 use Nette\Database\Explorer;
-use function array_filter, array_intersect_key, array_keys, array_map, array_merge, array_values, ceil, count, current, explode, func_num_args, hash, implode, is_array, is_int, iterator_to_array, key, next, reset, serialize, str_contains, substr_count;
+use function array_column, array_filter, array_intersect_key, array_keys, array_map, array_merge, array_values, ceil, count, current, explode, func_num_args, hash, implode, is_array, is_int, iterator_to_array, key, next, reset, serialize, str_contains, substr_count;
 
 
 /**
@@ -652,14 +652,9 @@ class Selection implements \IteratorAggregate, \ArrayAccess, \Countable
 		}
 
 		$key = [self::class, $this->name, $this->sqlBuilder->getConditions()];
-		$trace = [];
-		foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $item) {
-			$trace[] = isset($item['file'], $item['line'])
-				? $item['file'] . $item['line']
-				: null;
-		}
-
-		$key[] = $trace;
+		$trace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS);
+		$key[] = array_column($trace, 'file');
+		$key[] = array_column($trace, 'line');
 		return $this->generalCacheKey = hash('xxh128', serialize($key));
 	}
 
